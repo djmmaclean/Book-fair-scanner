@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173f5f">
+
+  <title>Book Fair Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    :root {
+      --navy: #173f5f;
+      --blue: #20639b;
+      --green: #28794f;
+      --red: #ad3535;
+      --pale: #eef5f8;
+      --line: #d4e0e6;
+      --ink: #17222b;
+      --muted: #5d6b75;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--pale);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      padding: calc(18px + env(safe-area-inset-top)) 18px 18px;
+      background: var(--navy);
+      color: white;
+    }
+
+    header div, main {
+      width: min(900px, 100%);
+      margin: auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      color: #dceaf2;
+    }
+
+    main {
+      padding: 15px 13px 45px;
+    }
+
+    section {
+      margin-bottom: 14px;
+      padding: 15px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      box-shadow: 0 7px 24px rgba(23, 63, 95, 0.09);
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+    }
+
+    button, input {
+      min-height: 48px;
+      font: inherit;
+      font-size: 16px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 9px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:focus-visible, input:focus-visible {
+      outline: 3px solid #f2b134;
+      outline-offset: 2px;
+    }
+
+    .primary {
+      background: var(--green);
+      color: white;
+    }
+
+    .secondary {
+      background: #dfeaf0;
+      color: var(--navy);
+    }
+
+    .danger {
+      background: #fae5e5;
+      color: var(--red);
+    }
+
+    .camera-buttons, .bottom-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    #reader {
+      margin-top: 13px;
+      overflow: hidden;
+      border-radius: 13px;
+    }
+
+    #reader:empty { display: none; }
+
+    #status {
+      min-height: 24px;
+      margin: 11px 0 0;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    #status.good { color: var(--green); }
+    #status.bad { color: var(--red); }
+
+    #latest {
+      display: none;
+      margin-top: 11px;
+      padding: 12px;
+      background: #edf8f2;
+      border-left: 5px solid var(--green);
+      border-radius: 12px;
+    }
+
+    #latest.show { display: block; }
+
+    #latestTitle {
+      font-weight: 800;
+    }
+
+    #latestDetails {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr auto;
+      gap: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #b8cbd5;
+      border-radius: 11px;
+    }
+
+    .inventory-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .totals {
+      display: flex;
+      gap: 17px;
+    }
+
+    .total strong {
+      display: block;
+      color: var(--navy);
+      font-size: 1.3rem;
+    }
+
+    .total span {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    #bookList {
+      display: grid;
+      gap: 9px;
+    }
+
+    .empty {
+      padding: 22px 8px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .book {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+    }
+
+    .book-title {
+      font-weight: 750;
+    }
+
+    .book-details {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .quantity {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quantity button {
+      width: 44px;
+      min-height: 44px;
+      padding: 0;
+      background: #e5eff4;
+      color: var(--navy);
+      font-size: 1.3rem;
+    }
+
+    .quantity strong {
+      min-width: 28px;
+      text-align: center;
+      font-size: 1.15rem;
+    }
+
+    .row-buttons {
+      display: flex;
+      gap: 5px;
+      margin-top: 7px;
+    }
+
+    .row-buttons button {
+      min-height: 34px;
+      padding: 4px 7px;
+      background: transparent;
+      color: var(--blue);
+      font-size: 0.85rem;
+    }
+
+    .row-buttons .remove {
+      color: var(--red);
+    }
+
+    .bottom-buttons {
+      margin-top: 14px;
+    }
+
+    .note {
+      margin: 10px 2px 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 620px) {
+      form, .camera-buttons, .bottom-buttons {
+        grid-template-columns: 1fr;
+      }
+
+      .book {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div>
+      <h1>Book Fair Scanner</h1>
+      <p>Scan each ISBN barcode to build your stock list.</p>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>Scan books</h2>
+
+      <div class="camera-buttons">
+        <button id="startButton" class="primary">Start camera</button>
+        <button id="stopButton" class="secondary" disabled>Stop camera</button>
+      </div>
+
+      <div id="reader"></div>
+      <p id="status" role="status">Camera is off.</p>
+
+      <div id="latest" aria-live="polite">
+        <div id="latestTitle"></div>
+        <div id="latestDetails"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Add manually</h2>
+
+      <form id="manualForm">
+        <input id="isbnInput"
+               inputmode="numeric"
+               placeholder="13-digit ISBN"
+               aria-label="ISBN">
+
+        <input id="titleInput"
+               placeholder="Title (optional)"
+               aria-label="Book title">
+
+        <button class="secondary" type="submit">Add book</button>
+      </form>
+    </section>
+
+    <section>
+      <div class="inventory-heading">
+        <h2>Inventory</h2>
+
+        <div class="totals">
+          <div class="total">
+            <strong id="titleCount">0</strong>
+            <span>titles</span>
+          </div>
+
+          <div class="total">
+            <strong id="bookCount">0</strong>
+            <span>books</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="bookList"></div>
+
+      <div class="bottom-buttons">
+        <button id="exportButton" class="primary">Export CSV</button>
+        <button id="clearButton" class="danger">Clear inventory</button>
+      </div>
+
+      <p class="note">
+        The inventory is saved automatically on this device. CSV files
+        can be opened in Excel or Google Sheets.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "bookFairInventoryV1";
+
+    let inventory = {};
+    let scanner = null;
+    let scanning = false;
+    let lastCode = "";
+    let lastScanTime = 0;
+
+    const statusElement = document.getElementById("status");
+    const bookList = document.getElementById("bookList");
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+
+    function cleanISBN(value) {
+      return String(value || "").replace(/[^0-9]/g, "");
+    }
+
+    function validISBN13(isbn) {
+      if (!/^(978|979)[0-9]{10}$/.test(isbn)) return false;
+
+      let total = 0;
+
+      for (let index = 0; index < 12; index++) {
+        total += Number(isbn[index]) * (index % 2 ? 3 : 1);
+      }
+
+      return (10 - total % 10) % 10 === Number(isbn[12]);
+    }
+
+    function escapeHTML(value) {
+      return String(value || "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[character]);
+    }
+
+    function setStatus(message, type = "") {
+      statusElement.textContent = message;
+      statusElement.className = type;
+    }
+
+    function loadInventory() {
+      try {
+        inventory = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      } catch {
+        inventory = {};
+      }
+
+      renderInventory();
+    }
+
+    function saveInventory() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+      renderInventory();
+    }
+
+    async function findBook(isbn) {
+      try {
+        const response = await fetch(
+          "https://www.googleapis.com/books/v1/volumes?q=isbn:" + isbn
+        );
+
+        const data = await response.json();
+
+        if (data.totalItems && data.items?.[0]) {
+          const details = data.items[0].volumeInfo || {};
+
+          return {
+            title: details.title || "",
+            author: (details.authors || []).join(", ")
+          };
+        }
+      } catch {}
+
+      try {
+        const response = await fetch(
+          "https://openlibrary.org/api/books?bibkeys=ISBN:" +
+          isbn + "&jscmd=data&format=json"
+        );
+
+        const data = await response.json();
+        const details = data["ISBN:" + isbn];
+
+        if (details) {
+          return {
+            title: details.title || "",
+            author: (details.authors || [])
+              .map(author => author.name)
+              .join(", ")
+          };
+        }
+      } catch {}
+
+      return {
+        title: "Title not found",
+        author: ""
+      };
+    }
+
+    async function addBook(rawISBN, suppliedTitle = "") {
+      const isbn = cleanISBN(rawISBN);
+
+      if (!validISBN13(isbn)) {
+        setStatus(
+          "That is not a valid 13-digit ISBN beginning 978 or 979.",
+          "bad"
+        );
+        return false;
+      }
+
+      if (inventory[isbn]) {
+        inventory[isbn].quantity += 1;
+        saveInventory();
+        showLatest(inventory[isbn]);
+        setStatus("Added another copy.", "good");
+        return true;
+      }
+
+      setStatus("Looking up book…");
+
+      const details = suppliedTitle
+        ? { title: suppliedTitle, author: "" }
+        : await findBook(isbn);
+
+      inventory[isbn] = {
+        isbn,
+        title: details.title || "Title not found",
+        author: details.author || "",
+        quantity: 1
+      };
+
+      saveInventory();
+      showLatest(inventory[isbn]);
+
+      if (details.title && details.title !== "Title not found") {
+        setStatus("Book added.", "good");
+      } else {
+        setStatus("Book added — tap Edit title to correct it.", "good");
+      }
+
+      return true;
+    }
+
+    function showLatest(book) {
+      document.getElementById("latestTitle").textContent = book.title;
+      document.getElementById("latestDetails").textContent =
+        "ISBN " + book.isbn + " · Quantity " + book.quantity;
+
+      document.getElementById("latest").classList.add("show");
+
+      if (navigator.vibrate) {
+        navigator.vibrate(80);
+      }
+    }
+
+    async function barcodeRead(decodedText) {
+      const isbn = cleanISBN(decodedText);
+      const currentTime = Date.now();
+
+      if (isbn === lastCode && currentTime - lastScanTime < 2500) {
+        return;
+      }
+
+      lastCode = isbn;
+      lastScanTime = currentTime;
+
+      await addBook(isbn);
+    }
+
+    async function startScanner() {
+      if (scanning) return;
+
+      if (typeof Html5Qrcode === "undefined") {
+        setStatus(
+          "The scanner could not load. Check the internet connection and refresh.",
+          "bad"
+        );
+        return;
+      }
+
+      scanner = new Html5Qrcode("reader");
+
+      try {
+        await scanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 280, height: 150 },
+            formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13]
+          },
+          barcodeRead,
+          () => {}
+        );
+
+        scanning = true;
+        startButton.disabled = true;
+        stopButton.disabled = false;
+
+        setStatus("Point the camera at the ISBN barcode.", "good");
+      } catch {
+        scanner = null;
+
+        setStatus(
+          "Camera could not start. Allow camera access and try again.",
+          "bad"
+        );
+      }
+    }
+
+    async function stopScanner() {
+      if (!scanner || !scanning) return;
+
+      try {
+        await scanner.stop();
+        scanner.clear();
+      } catch {}
+
+      scanner = null;
+      scanning = false;
+      startButton.disabled = false;
+      stopButton.disabled = true;
+
+      setStatus("Camera is off.");
+    }
+
+    function renderInventory() {
+      const books = Object.values(inventory).sort((first, second) =>
+        first.title.localeCompare(second.title)
+      );
+
+      document.getElementById("titleCount").textContent = books.length;
+
+      document.getElementById("bookCount").textContent =
+        books.reduce((total, book) => total + book.quantity, 0);
+
+      if (!books.length) {
+        bookList.innerHTML =
+          '<div class="empty">No books scanned yet.</div>';
+        return;
+      }
+
+      bookList.innerHTML = books.map(book => `
+        <article class="book">
+          <div>
+            <div class="book-title">${escapeHTML(book.title)}</div>
+
+            <div class="book-details">
+              ${book.author ? escapeHTML(book.author) + " · " : ""}
+              ISBN ${book.isbn}
+            </div>
+
+            <div class="row-buttons">
+              <button class="edit" data-isbn="${book.isbn}">
+                Edit title
+              </button>
+
+              <button class="remove" data-isbn="${book.isbn}">
+                Remove
+              </button>
+            </div>
+          </div>
+
+          <div class="quantity">
+            <button class="minus"
+                    data-isbn="${book.isbn}"
+                    aria-label="Reduce quantity">−</button>
+
+            <strong>${book.quantity}</strong>
+
+            <button class="plus"
+                    data-isbn="${book.isbn}"
+                    aria-label="Increase quantity">+</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    bookList.addEventListener("click", event => {
+      const button = event.target.closest("button[data-isbn]");
+
+      if (!button) return;
+
+      const isbn = button.dataset.isbn;
+      const book = inventory[isbn];
+
+      if (!book) return;
+
+      if (button.classList.contains("plus")) {
+        book.quantity += 1;
+      }
+
+      if (button.classList.contains("minus")) {
+        book.quantity -= 1;
+
+        if (book.quantity <= 0) {
+          delete inventory[isbn];
+        }
+      }
+
+      if (
+        button.classList.contains("remove") &&
+        confirm("Remove " + book.title + " from the inventory?")
+      ) {
+        delete inventory[isbn];
+      }
+
+      if (button.classList.contains("edit")) {
+        const newTitle = prompt("Book title", book.title);
+
+        if (newTitle?.trim()) {
+          book.title = newTitle.trim();
+        }
+      }
+
+      saveInventory();
+    });
+
+    document.getElementById("manualForm").addEventListener(
+      "submit",
+      async event => {
+        event.preventDefault();
+
+        const isbnInput = document.getElementById("isbnInput");
+        const titleInput = document.getElementById("titleInput");
+
+        const added = await addBook(
+          isbnInput.value,
+          titleInput.value.trim()
+        );
+
+        if (added) {
+          isbnInput.value = "";
+          titleInput.value = "";
+          isbnInput.focus();
+        }
+      }
+    );
+
+    document.getElementById("exportButton").addEventListener(
+      "click",
+      () => {
+        const books = Object.values(inventory);
+
+        if (!books.length) {
+          setStatus("There is nothing to export yet.", "bad");
+          return;
+        }
+
+        const quote = value =>
+          '"' + String(value || "").replace(/"/g, '""') + '"';
+
+        const rows = [
+          ["ISBN", "Title", "Author", "Quantity"],
+          ...books
+            .sort((first, second) =>
+              first.title.localeCompare(second.title)
+            )
+            .map(book => [
+              book.isbn,
+              book.title,
+              book.author,
+              book.quantity
+            ])
+        ];
+
+        const csv = "\ufeff" + rows
+          .map(row => row.map(quote).join(","))
+          .join("\r\n");
+
+        const blob = new Blob([csv], {
+          type: "text/csv;charset=utf-8"
+        });
+
+        const address = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = address;
+        link.download =
+          "book-fair-inventory-" +
+          new Date().toISOString().slice(0, 10) +
+          ".csv";
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(address);
+        setStatus("Spreadsheet exported.", "good");
+      }
+    );
+
+    document.getElementById("clearButton").addEventListener(
+      "click",
+      () => {
+        if (
+          Object.keys(inventory).length &&
+          confirm("Clear the entire inventory? This cannot be undone.")
+        ) {
+          inventory = {};
+          saveInventory();
+
+          document.getElementById("latest").classList.remove("show");
+          setStatus("Inventory cleared.");
+        }
+      }
+    );
+
+    startButton.addEventListener("click", startScanner);
+    stopButton.addEventListener("click", stopScanner);
+
+    window.addEventListener("pagehide", () => {
+      if (scanner && scanning) {
+        scanner.stop().catch(() => {});
+      }
+    });
+
+    loadInventory();
+  </script>
+</body>
+</html>
